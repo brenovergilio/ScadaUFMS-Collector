@@ -63,7 +63,7 @@ class DBHandler(Connection):
             sql_str = f"""
       CREATE TABLE IF NOT EXISTS medidores (
         ip TEXT NOT NULL PRIMARY KEY,
-        timestamp TIMESTAMP,
+        created_at TIMESTAMP,
         nome TEXT NOT NULL,
         porta INTEGER NOT NULL,
         hora_fora_ponta INTEGER NOT NULL,
@@ -176,14 +176,14 @@ class DBHandler(Connection):
         finally:
             self._lock.release()
 
-    def add_medicoes(self, ip, medicoes):
+    def add_medicoes(self, ip, timestamp, medicoes):
         """
         Método responsável por adicionar as medições do medidor no banco de dados
         """
         try:
             self._lock.acquire()
-            str_values = f"'{ip}', NOW(), " + ','.join((str(v)
-                                                        for v in medicoes))
+            str_values = f"'{ip}', '{timestamp}', " + ','.join((str(v)
+                                                                for v in medicoes))
             sql_str = f"INSERT INTO medicoes VALUES ({str_values});"
             self._cursor.execute(sql_str)
             self._con.commit()

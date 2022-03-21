@@ -111,8 +111,9 @@ class MedidorMD30():
             medicoes = []
             self._client.open()
             if(self._client.is_open()):
+                now = datetime.now()
                 print(
-                    f"[COLLECTING DATA FROM {self._ip} ON PORT {self._porta}] at {datetime.now()}")
+                    f"[COLLECTING DATA FROM {self._ip} ON PORT {self._porta}] at {now}")
 
                 medicoes.append(self.tensao_fase_a())
                 medicoes.append(self.tensao_fase_b())
@@ -137,7 +138,7 @@ class MedidorMD30():
                 medicoes.append(self.fator_potencia_c())
                 medicoes.append(self.fator_potencia_total())
 
-                self._dbhandler.add_medicoes(self._ip, medicoes)
+                self._dbhandler.add_medicoes(self._ip, str(now), medicoes)
             else:
                 raise Exception('Connection error')
         except Exception as e:

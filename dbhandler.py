@@ -46,7 +46,8 @@ class DBHandler(Connection):
         self._lock = Lock()
         self.create_medidores()
         self.create_medicoes()
-        self.create_max_potencia_ativa_total()
+        self.create_demandas()
+        self.create_feriado()
        # self.create_alarmes()
 
     def __del__(self):
@@ -120,20 +121,40 @@ class DBHandler(Connection):
         finally:
             self._lock.release()
 
-    def create_max_potencia_ativa_total(self):
+    def create_demandas(self):
         """
-        Método responsável por criar a tabela que armazena o valor máximo das médias das potências ativas totais nos horários de ponta e fora de ponta
+        Método responsável por criar a tabela que armazena as demandas nos horários de ponta e fora de ponta
         """
         try:
             sql_str = """
-            CREATE TABLE IF NOT EXISTS max_pot_ativa_total (
+            CREATE TABLE IF NOT EXISTS demandas (
               medidor TEXT NOT NULL,
-              dia DATE NOT NULL,
-              max_fora_ponta REAL NOT NULL,
-              max_ponta REAL NOT NULL,
+              timestamps TIMESTAMP NOT NULL,
+              demanda_fora_ponta REAL NOT NULL,
+              demanda_ponta REAL NOT NULL,
               FOREIGN KEY (medidor) REFERENCES medidores(ip) ON DELETE CASCADE ON UPDATE CASCADE
-            ) 
+            ); 
             """
+            self._lock.acquire()
+            self._cursor.execute(sql_str)
+            self._con.commit()
+        except Exception as e:
+            print('Erro: ', e.args)
+        finally:
+            self._lock.release()
+
+    def create_feriado(self):
+        """
+        Método responsável por criar a tabela que registra os feriados
+        """
+        try:
+            sql_str = f"""
+        CREATE TABLE IF NOT EXISTS feriados (
+            id SMALLSERIAL PRIMARY KEY,
+            nome TEXT NOT NULL,
+            dia DATE NOT NULL
+        );
+        """
             self._lock.acquire()
             self._cursor.execute(sql_str)
             self._con.commit()
@@ -192,9 +213,9 @@ class DBHandler(Connection):
         finally:
             self._lock.release()
 
-    def add_max_pot_ativa_total(self, ip, hora_ponta=17, min_ponta=30):
+    def add_demanda(self, ip, hora_ponta=17, min_ponta=30):
         """
-        Método responsável por adicionar as máximas potências ativas totais ao banco de dados
+        Método responsável por adicionar as demandas ao banco de dados
         """
         try:
             current_date = str(date.today())
@@ -202,18 +223,33 @@ class DBHandler(Connection):
             fim_horario_ponta = current_date + \
                 f' {hora_ponta+3}:{min_ponta}:00'
             self._lock.acquire()
-            max_media_fora_ponta = f"SELECT MAX(pot_at_total) FROM (SELECT to_timestamp(FLOOR(extract('epoch' FROM timestamp::timestamptz) / 900) * 900) AS interval, AVG(potencia_ativa_total) as pot_at_total FROM medicoes WHERE medidor='{ip}' AND ((to_timestamp(FLOOR(extract('epoch' FROM timestamp::timestamptz) / 900) * 900) >= '{current_date} 00:00:00' AND to_timestamp(FLOOR(extract('epoch' FROM timestamp::timestamptz) / 900) * 900) < '{horario_ponta}') OR (to_timestamp(FLOOR(extract('epoch' FROM timestamp::timestamptz) / 900) * 900) >= '{fim_horario_ponta}' AND to_timestamp(FLOOR(extract('epoch' FROM timestamp::timestamptz) / 900) * 900) <= '{current_date} 23:59:59')) GROUP BY interval ORDER BY interval) as medias;"
-            max_media_ponta = f"SELECT MAX(pot_at_total) FROM (SELECT to_timestamp(FLOOR(extract('epoch' FROM timestamp::timestamptz) / 900) * 900) AS interval, AVG(potencia_ativa_total) as pot_at_total FROM medicoes WHERE medidor='{ip}' AND to_timestamp(FLOOR(extract('epoch' FROM timestamp::timestamptz) / 900) * 900) >= '{horario_ponta}' AND to_timestamp(FLOOR(extract('epoch' FROM timestamp::timestamptz) / 900) * 900) < '{fim_horario_ponta}' GROUP BY interval ORDER BY interval) as medias;"
-            self._cursor.execute(max_media_fora_ponta)
-            max_fora_ponta = self._cursor.fetchone()[0]
-            self._cursor.execute(max_media_ponta)
-            max_ponta = self._cursor.fetchone()[0]
-            if not max_fora_ponta:
-                max_fora_ponta = 0.0
-            if not max_ponta:
-                max_ponta = 0.0
-            str_values = f"'{ip}', CURRENT_DATE, {max_fora_ponta}, {max_ponta}"
-            sql_str = f"INSERT INTO max_pot_ativa_total VALUES ({str_values});"
+            demanda_fora_ponta = f"SELECT MAX(pot_at_total) FROM (SELECT to_timestamp(FLOOR(extract('epoch' FROM timestamp::timestamptz) / 900) * 900) AS interval, AVG(potencia_ativa_total) as pot_at_total FROM medicoes WHERE medidor='{ip}' AND ((to_timestamp(FLOOR(extract('epoch' FROM timestamp::timestamptz) / 900) * 900) >= '{current_date} 00:00:00' AND to_timestamp(FLOOR(extract('epoch' FROM timestamp::timestamptz) / 900) * 900) < '{horario_ponta}') OR (to_timestamp(FLOOR(extract('epoch' FROM timestamp::timestamptz) / 900) * 900) >= '{fim_horario_ponta}' AND to_timestamp(FLOOR(extract('epoch' FROM timestamp::timestamptz) / 900) * 900) <= '{current_date} 23:59:59')) GROUP BY interval ORDER BY interval) as medias;"
+            demanda_ponta = f"SELECT MAX(pot_at_total) FROM (SELECT to_timestamp(FLOOR(extract('epoch' FROM timestamp::timestamptz) / 900) * 900) AS interval, AVG(potencia_ativa_total) as pot_at_total FROM medicoes WHERE medidor='{ip}' AND to_timestamp(FLOOR(extract('epoch' FROM timestamp::timestamptz) / 900) * 900) >= '{horario_ponta}' AND to_timestamp(FLOOR(extract('epoch' FROM timestamp::timestamptz) / 900) * 900) < '{fim_horario_ponta}' GROUP BY interval ORDER BY interval) as medias;"
+            self._cursor.execute(demanda_fora_ponta)
+            demanda_fora_ponta = self._cursor.fetchone()[0]
+            self._cursor.execute(demanda_ponta)
+            demanda_ponta = self._cursor.fetchone()[0]
+            if not demanda_fora_ponta:
+                demanda_fora_ponta = 0.0
+            if not demanda_ponta:
+                demanda_ponta = 0.0
+            str_values = f"'{ip}', CURRENT_DATE, {demanda_fora_ponta}, {demanda_ponta}"
+            sql_str = f"INSERT INTO demandas VALUES ({str_values});"
+            self._cursor.execute(sql_str)
+            self._con.commit()
+        except Exception as e:
+            print("Erro: ", e.args)
+        finally:
+            self._lock.release()
+
+    def add_feriado(self, nome, data):
+        """
+        Método responsável por adicionar um novo feriado no banco de dados
+        """
+        try:
+            self._lock.acquire()
+            str_values = f"'{nome}', '{data}'"
+            sql_str = f"INSERT INTO feriados (nome, dia) VALUES ({str_values});"
             self._cursor.execute(sql_str)
             self._con.commit()
         except Exception as e:
@@ -255,6 +291,20 @@ class DBHandler(Connection):
     def del_medicoes(self, ip):
         pass
 
+    def del_feriado(self, id):
+        """
+        Método responsável por deletar um feriado do banco de dados
+        """
+        try:
+            self._lock.acquire()
+            sql_str = f"DELETE FROM feriados WHERE id={id};"
+            self._cursor.execute(sql_str)
+            self._con.commit()
+        except Exception as e:
+            print("Erro: ", e.args)
+        finally:
+            self._lock.release()
+
     def del_alarme(self, id):
         pass
 
@@ -267,6 +317,22 @@ class DBHandler(Connection):
         try:
             self._lock.acquire()
             sql_str = "SELECT * FROM medidores;"
+            self._cursor.execute(sql_str)
+            medidores = self._cursor.fetchall()
+            self._con.commit()
+            return medidores
+        except Exception as e:
+            print("Erro: ", e.args)
+        finally:
+            self._lock.release()
+
+    def get_all_feriados(self):
+        """
+        Retorna todos os feriados cadastrados
+        """
+        try:
+            self._lock.acquire()
+            sql_str = "SELECT * FROM feriados;"
             self._cursor.execute(sql_str)
             medidores = self._cursor.fetchall()
             self._con.commit()

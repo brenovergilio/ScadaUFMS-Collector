@@ -39,7 +39,7 @@ if __name__ == '__main__':
                 minute = now.minute
                 if(hour == 23 and minute == 59 and second == 30):
                     for med in medidores:
-                        Thread(target=db.add_add_demanda,
+                        Thread(target=db.add_demanda,
                                args=med._ip).start()
                 medidores = []
         except Exception as e:

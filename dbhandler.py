@@ -1,5 +1,5 @@
 import psycopg2 as db
-from datetime import date
+from datetime import date, datetime
 from threading import Lock
 
 
@@ -48,7 +48,7 @@ class DBHandler(Connection):
         self.create_medicoes()
         self.create_demandas()
         self.create_feriado()
-       # self.create_alarmes()
+        self.create_alarmes()
 
     def __del__(self):
         self._con.commit()
@@ -163,22 +163,26 @@ class DBHandler(Connection):
         finally:
             self._lock.release()
 
-    # def create_alarmes(self):
-    #   """
-    #   Método responsável por criar a tabela que registra os alarmes dos medidores
-    #   """
-    #   try:
-    #     sql_str = f"""
-    #     ---
-    #     );
-    #     """
-    #     self._lock.acquire()
-    #     self._cursor.execute(sql_str)
-    #     self._con.commit()
-    #   except Exception as e:
-    #     print('Erro: ', e.args)
-    #   finally:
-    #     self._lock.release()
+    def create_alarmes(self):
+        """
+        Método responsável por criar a tabela que registra os alarmes dos medidores
+        """
+        try:
+            sql_str = f"""
+        CREATE TABLE IF NOT EXISTS alarmes (
+            medidor TEXT NOT NULL,
+            timestamp TIMESTAMP NOT NULL,
+            message TEXT NOT NULL,
+            FOREIGN KEY (medidor) REFERENCES medidores(ip) ON DELETE CASCADE ON UPDATE CASCADE
+        );
+        """
+            self._lock.acquire()
+            self._cursor.execute(sql_str)
+            self._con.commit()
+        except Exception as e:
+            print('Erro: ', e.args)
+        finally:
+            self._lock.release()
 
     # Métodos de inserção
 
@@ -257,13 +261,13 @@ class DBHandler(Connection):
         finally:
             self._lock.release()
 
-    def add_alarme(self, dados):
+    def add_alarme(self, ip, timestamp, message):
         """
         Método responsável por adicionar um novo alarme no banco de dados
         """
         try:
             self._lock.acquire()
-            str_values = f"NOW(), " + ','.join(dados)
+            str_values = f"'{ip}', '{timestamp}', '{message}'"
             sql_str = f"INSERT INTO alarmes VALUES ({str_values});"
             self._cursor.execute(sql_str)
             self._con.commit()
@@ -305,8 +309,19 @@ class DBHandler(Connection):
         finally:
             self._lock.release()
 
-    def del_alarme(self, id):
-        pass
+    def del_alarme(self, ip, timestamp):
+        """
+        Método responsável por deletar um alarme do banco de dados
+        """
+        try:
+            self._lock.acquire()
+            sql_str = f"DELETE FROM alarmes WHERE medidor='{ip}' AND timestamp='{timestamp}';"
+            self._cursor.execute(sql_str)
+            self._con.commit()
+        except Exception as e:
+            print("Erro: ", e.args)
+        finally:
+            self._lock.release()
 
     # Métodos de seleção
 
@@ -332,11 +347,27 @@ class DBHandler(Connection):
         """
         try:
             self._lock.acquire()
-            sql_str = "SELECT * FROM feriados;"
+            sql_str = "SELECT * FROM feriados order by dia desc;"
             self._cursor.execute(sql_str)
             medidores = self._cursor.fetchall()
             self._con.commit()
             return medidores
+        except Exception as e:
+            print("Erro: ", e.args)
+        finally:
+            self._lock.release()
+
+    def get_alarme_per_medidor(self, ip):
+        """
+        Retorna todos os medidores cadastrados
+        """
+        try:
+            self._lock.acquire()
+            sql_str = f"SELECT * FROM alarmes where medidor='{ip}' order by timestamp desc;"
+            self._cursor.execute(sql_str)
+            alarmes = self._cursor.fetchall()
+            self._con.commit()
+            return alarmes
         except Exception as e:
             print("Erro: ", e.args)
         finally:
@@ -360,11 +391,27 @@ class DBHandler(Connection):
 
     def get_medias_per_interval(self, ip, interval, initial_datetime, final_datetime):
         """
-        Retorna todas as médias das medições em um determinado intervalo de tempo (em segundos)
+        Retorna todas as médias das potências ativas, reativas e aparentes em um determinado intervalo de tempo (em segundos)
         """
         try:
             self._lock.acquire()
             sql_str = f"SELECT to_timestamp(FLOOR(extract('epoch' FROM timestamp::timestamptz) / {interval}) * {interval}) AS interval, AVG(potencia_ativa_total), AVG(potencia_reativa_total), AVG(potencia_aparente_total) FROM medicoes WHERE medidor='{ip}' AND to_timestamp(FLOOR(extract('epoch' FROM timestamp::timestamptz) / {interval}) * {interval}) >= '{initial_datetime}' AND to_timestamp(FLOOR(extract('epoch' FROM timestamp::timestamptz) / {interval}) * {interval}) <= '{final_datetime}' GROUP BY interval ORDER BY interval;"
+            self._cursor.execute(sql_str)
+            medicoes = self._cursor.fetchall()
+            self._con.commit()
+            return medicoes
+        except Exception as e:
+            print('Erro: ', e.args)
+        finally:
+            self._lock.release()
+
+    def get_max_per_interval(self, ip, interval, initial_datetime, final_datetime):
+        """
+        Retorna todas as máximas potências ativas, reativas e aparentes em um determinado intervalo de tempo (em segundos)
+        """
+        try:
+            self._lock.acquire()
+            sql_str = f"SELECT to_timestamp(FLOOR(extract('epoch' FROM timestamp::timestamptz) / {interval}) * {interval}) AS interval, MAX(potencia_ativa_total), MAX(potencia_reativa_total), MAX(potencia_aparente_total) FROM medicoes WHERE medidor='{ip}' AND to_timestamp(FLOOR(extract('epoch' FROM timestamp::timestamptz) / {interval}) * {interval}) >= '{initial_datetime}' AND to_timestamp(FLOOR(extract('epoch' FROM timestamp::timestamptz) / {interval}) * {interval}) <= '{final_datetime}' GROUP BY interval ORDER BY interval;"
             self._cursor.execute(sql_str)
             medicoes = self._cursor.fetchall()
             self._con.commit()

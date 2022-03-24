@@ -140,7 +140,8 @@ class MedidorMD30():
 
                 self._dbhandler.add_medicoes(self._ip, str(now), medicoes)
             else:
-                raise Exception('Connection error')
+                self._dbhandler.add_alarme(
+                    self._ip, str(now), 'Perda de conexão')
         except Exception as e:
             print("Erro: ", e.args)
         finally:

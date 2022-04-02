@@ -67,8 +67,9 @@ class DBHandler(Connection):
         created_at TIMESTAMP,
         nome TEXT NOT NULL,
         porta INTEGER NOT NULL,
-        hora_fora_ponta INTEGER NOT NULL,
-        min_fora_ponta INTEGER NOT NULL
+        hora_ponta INTEGER NOT NULL,
+        minuto_ponta INTEGER NOT NULL,
+        intervalo_ponta INTEGER NOT NULL
       );
       """
             self._lock.acquire()

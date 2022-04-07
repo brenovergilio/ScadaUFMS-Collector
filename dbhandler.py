@@ -87,7 +87,7 @@ class DBHandler(Connection):
         try:
             sql_str = f"""
       CREATE TABLE IF NOT EXISTS medicoes (
-        medidor TEXT NOT NULL,
+        medidor_ip TEXT NOT NULL,
         timestamp TIMESTAMP NOT NULL,
         tensao_fase_a REAL NOT NULL,
         tensao_fase_b REAL NOT NULL,
@@ -111,7 +111,7 @@ class DBHandler(Connection):
         fator_potencia_b REAL NOT NULL,
         fator_potencia_c REAL NOT NULL,
         fator_potencia_total REAL NOT NULL,
-        FOREIGN KEY (medidor) REFERENCES medidores(ip) ON DELETE CASCADE ON UPDATE CASCADE
+        FOREIGN KEY (medidor_ip) REFERENCES medidores(ip) ON DELETE CASCADE ON UPDATE CASCADE
       );
       """
             self._lock.acquire()
@@ -129,11 +129,11 @@ class DBHandler(Connection):
         try:
             sql_str = """
             CREATE TABLE IF NOT EXISTS demandas (
-              medidor TEXT NOT NULL,
+              medidor_ip TEXT NOT NULL,
               timestamps TIMESTAMP NOT NULL,
               demanda_fora_ponta REAL NOT NULL,
               demanda_ponta REAL NOT NULL,
-              FOREIGN KEY (medidor) REFERENCES medidores(ip) ON DELETE CASCADE ON UPDATE CASCADE
+              FOREIGN KEY (medidor_ip) REFERENCES medidores(ip) ON DELETE CASCADE ON UPDATE CASCADE
             ); 
             """
             self._lock.acquire()
@@ -171,10 +171,10 @@ class DBHandler(Connection):
         try:
             sql_str = f"""
         CREATE TABLE IF NOT EXISTS alarmes (
-            medidor TEXT NOT NULL,
+            medidor_ip TEXT NOT NULL,
             timestamp TIMESTAMP NOT NULL,
             message TEXT NOT NULL,
-            FOREIGN KEY (medidor) REFERENCES medidores(ip) ON DELETE CASCADE ON UPDATE CASCADE
+            FOREIGN KEY (medidor_ip) REFERENCES medidores(ip) ON DELETE CASCADE ON UPDATE CASCADE
         );
         """
             self._lock.acquire()
@@ -187,13 +187,13 @@ class DBHandler(Connection):
 
     # Métodos de inserção
 
-    def add_medidor(self, ip, nome, porta, hora_ponta=17, minuto_ponta=30):
+    def add_medidor(self, ip, nome, porta, hora_ponta=17, minuto_ponta=30, intervalo_ponta=3):
         """
         Método responsável por adicionar um novo medidor no banco de dados
         """
         try:
             self._lock.acquire()
-            str_values = f"'{ip}', NOW(), '{nome}', {porta}, {hora_ponta}, {minuto_ponta}"
+            str_values = f"'{ip}', NOW(), '{nome}', {porta}, {hora_ponta}, {minuto_ponta}, {intervalo_ponta}"
             sql_str = f"INSERT INTO medidores VALUES ({str_values});"
             self._cursor.execute(sql_str)
             self._con.commit()
@@ -218,7 +218,7 @@ class DBHandler(Connection):
         finally:
             self._lock.release()
 
-    def add_demanda(self, ip, hora_ponta=17, min_ponta=30):
+    def add_demanda(self, ip, hora_ponta=17, min_ponta=30, intervalo_ponta=3):
         """
         Método responsável por adicionar as demandas ao banco de dados
         """
@@ -226,7 +226,7 @@ class DBHandler(Connection):
             current_date = str(date.today())
             horario_ponta = current_date + f' {hora_ponta}:{min_ponta}:00'
             fim_horario_ponta = current_date + \
-                f' {hora_ponta+3}:{min_ponta}:00'
+                f' {hora_ponta+intervalo_ponta}:{min_ponta}:00'
             self._lock.acquire()
             demanda_fora_ponta = f"SELECT MAX(pot_at_total) FROM (SELECT to_timestamp(FLOOR(extract('epoch' FROM timestamp::timestamptz) / 900) * 900) AS interval, AVG(potencia_ativa_total) as pot_at_total FROM medicoes WHERE medidor='{ip}' AND ((to_timestamp(FLOOR(extract('epoch' FROM timestamp::timestamptz) / 900) * 900) >= '{current_date} 00:00:00' AND to_timestamp(FLOOR(extract('epoch' FROM timestamp::timestamptz) / 900) * 900) < '{horario_ponta}') OR (to_timestamp(FLOOR(extract('epoch' FROM timestamp::timestamptz) / 900) * 900) >= '{fim_horario_ponta}' AND to_timestamp(FLOOR(extract('epoch' FROM timestamp::timestamptz) / 900) * 900) <= '{current_date} 23:59:59')) GROUP BY interval ORDER BY interval) as medias;"
             demanda_ponta = f"SELECT MAX(pot_at_total) FROM (SELECT to_timestamp(FLOOR(extract('epoch' FROM timestamp::timestamptz) / 900) * 900) AS interval, AVG(potencia_ativa_total) as pot_at_total FROM medicoes WHERE medidor='{ip}' AND to_timestamp(FLOOR(extract('epoch' FROM timestamp::timestamptz) / 900) * 900) >= '{horario_ponta}' AND to_timestamp(FLOOR(extract('epoch' FROM timestamp::timestamptz) / 900) * 900) < '{fim_horario_ponta}' GROUP BY interval ORDER BY interval) as medias;"

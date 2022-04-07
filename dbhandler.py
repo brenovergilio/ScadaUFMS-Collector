@@ -128,7 +128,7 @@ class DBHandler(Connection):
         """
         try:
             sql_str = """
-            CREATE TABLE IF NOT EXISTS demandas (
+            CREATE TABLE IF NOT EXISTS demandas_diarias (
               medidor_ip TEXT NOT NULL,
               timestamps TIMESTAMP NOT NULL,
               demanda_fora_ponta REAL NOT NULL,

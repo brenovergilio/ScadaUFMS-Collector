@@ -8,7 +8,8 @@ class MedidorMD30():
     Classe que representa o Medidor MD30 e invoca suas relações com o Database
     """
 
-    def __init__(self, ip, nome, dbhandler, porta=1001):
+    def __init__(self, id, ip, nome, dbhandler, porta=1001):
+        self._id = id
         self._ip = ip
         self._nome = nome
         self._porta = porta
@@ -106,7 +107,7 @@ class MedidorMD30():
         return client
 
     # Requista dados ao medidor e armazena no banco de dados
-    def populate(self):
+    def collect(self):
         try:
             medicoes = []
             self._client.open()
@@ -138,10 +139,10 @@ class MedidorMD30():
                 medicoes.append(self.fator_potencia_c())
                 medicoes.append(self.fator_potencia_total())
 
-                self._dbhandler.add_medicoes(self._ip, str(now), medicoes)
+                self._dbhandler.add_medicoes(self._id, str(now), medicoes)
             else:
                 self._dbhandler.add_alarme(
-                    self._ip, str(now), 'Perda de conexão')
+                    self._id, str(now), 'Perda de conexão')
         except Exception as e:
             print("Erro: ", e.args)
         finally:

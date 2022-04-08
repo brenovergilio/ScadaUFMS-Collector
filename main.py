@@ -8,8 +8,7 @@ from datetime import datetime
 def medidores_factory(meds, db):
     medidores = []
     for med in meds:
-        # med[0] é IP, med[1] é a data de criação (não utilizado aqui), med[2] é o nome e med[3] é a porta de conexão
-        medidor = MedidorMD30(med[0], med[2], db)
+        medidor = MedidorMD30(med[0], med[1], med[3], db)
         medidores.append(medidor)
     return medidores
 
@@ -19,11 +18,6 @@ if __name__ == '__main__':
     db = DBHandler()
 
     while(True):
-        # Pensar em começar as coletas apenas se for 00:00:00 e fazê-las de 30 em 30 segundos
-        #current_hour = datetime.now()
-        #start_hour = f"{current_hour.hour}:{current_hour.minute}:{current_hour.second}"
-        # if(start_hour == '0:0:0'):
-
         try:
             # Aparentemente mais preciso que sleep(30) - testar mais tarde novamente
             now = datetime.now()
@@ -33,7 +27,7 @@ if __name__ == '__main__':
                 database_meds = db.get_all_medidores()
                 medidores = medidores_factory(database_meds, db)
                 for med in medidores:
-                    Thread(target=med.populate()).start()
+                    Thread(target=med.collect()).start()
                 sleep(1.5)
                 hour = now.hour
                 minute = now.minute

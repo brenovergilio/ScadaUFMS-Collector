@@ -204,7 +204,7 @@ class DBHandler(Connection):
         """
         try:
             self._lock.acquire()
-            sql_str = "SELECT * FROM medidores;"
+            sql_str = "SELECT * FROM medidores_md30;"
             self._cursor.execute(sql_str)
             medidores = self._cursor.fetchall()
             self._con.commit()

@@ -27,6 +27,6 @@ if __name__ == '__main__':
                 medidores = medidores_factory(database_meds, db)
                 for med in medidores:
                     Thread(target=med.collect()).start()
-                sleep(1.5)
+                sleep(28)
         except Exception as e:
             print('Erro: ', e.args)

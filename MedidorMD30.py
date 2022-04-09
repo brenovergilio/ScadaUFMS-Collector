@@ -111,8 +111,8 @@ class MedidorMD30():
         try:
             medicoes = []
             self._client.open()
+            now = datetime.now()
             if(self._client.is_open()):
-                now = datetime.now()
                 print(
                     f"[COLLECTING DATA FROM {self._ip} ON PORT {self._porta}] at {now}")
 
@@ -141,6 +141,7 @@ class MedidorMD30():
 
                 self._dbhandler.add_medicoes(self._id, str(now), medicoes)
             else:
+                print(f'[ADDING ALARM TO {self._ip} at {now}]')
                 self._dbhandler.add_alarme(
                     self._id, str(now), 'Perda de conexão')
         except Exception as e:

@@ -101,18 +101,15 @@ class MedidorMD30():
 
     # Configurar ip e porta do client MODBUS
     def set_client(self):
-        client = ModbusClient()
-        client.host(self._ip)
-        client.port(self._porta)
+        client = ModbusClient(self._ip, self._porta, timeout=0.5)
         return client
 
     # Requista dados ao medidor e armazena no banco de dados
     def collect(self):
         try:
             medicoes = []
-            self._client.open()
             now = datetime.now()
-            if(self._client.is_open()):
+            if(self._client.open()):
                 print(
                     f"[COLLECTING DATA FROM {self._ip} ON PORT {self._porta}] at {now}")
 

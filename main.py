@@ -30,3 +30,4 @@ if __name__ == '__main__':
                 sleep(1.5)
         except Exception as e:
             print('Erro: ', e.args)
+            exit(1)

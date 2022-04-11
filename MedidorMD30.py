@@ -23,7 +23,7 @@ class MedidorMD30():
             value = self._client.read_holding_registers(
                 registrador, quantidade_regs)
             if not value:
-                value = 0.0
+                return 0.0
             return value if is_short else self.convert_to_float(value)
         except Exception as e:
             print("Erro: ", e.args)
@@ -96,7 +96,7 @@ class MedidorMD30():
 
     # Conversão de valores retornados pelo medidor para float
     def convert_to_float(self, value):
-        retorno = np.array(value, dtype=np.int16).view('float32')
+        retorno = np.array(value, dtype=np.int16).copy().view('float32')
         return float(retorno)
 
     # Configurar ip e porta do client MODBUS

@@ -43,6 +43,7 @@ class DBHandler(Connection):
         Connection.__init__(self)
         self._lock = Lock()
         self._cursor.execute("SET TIMEZONE='Brazil/West';")
+        self.create_users()
         self.create_medidores()
         self.create_medicoes()
         self.create_feriado()
@@ -54,6 +55,28 @@ class DBHandler(Connection):
 
     # Métodos de criação de tabela
 
+    def create_users(self):
+        """
+        Método responsável por criar a tabela de usuários, caso esta não exista
+        """
+        try:
+            sql_str = f"""
+      CREATE TABLE IF NOT EXISTS users (
+        id UUID PRIMARY KEY,
+        created_at TIMESTAMP,
+        username TEXT NOT NULL,
+        password TEXT NOT NULL,
+        type SMALLINT NOT NULL
+    );
+      """
+            self._lock.acquire()
+            self._cursor.execute(sql_str)
+            self._con.commit()
+        except Exception as e:
+            print('Erro: ', e.args)
+        finally:
+            self._lock.release()
+
     def create_medidores(self):
         """
         Método responsável por criar a tabela de medidores, caso esta não exista
@@ -61,7 +84,7 @@ class DBHandler(Connection):
         try:
             sql_str = f"""
       CREATE TABLE IF NOT EXISTS medidores_md30 (
-        id SMALLSERIAL PRIMARY KEY,
+        id UUID PRIMARY KEY,
         ip TEXT NOT NULL,
         created_at TIMESTAMP,
         nome TEXT NOT NULL,
@@ -86,7 +109,7 @@ class DBHandler(Connection):
         try:
             sql_str = f"""
       CREATE TABLE IF NOT EXISTS medicoes_md30 (
-        medidor_id SMALLINT NOT NULL,
+        medidor_id UUID NOT NULL,
         timestamp TIMESTAMP NOT NULL,
         tensao_fase_a REAL NOT NULL,
         tensao_fase_b REAL NOT NULL,
@@ -128,7 +151,7 @@ class DBHandler(Connection):
         try:
             sql_str = f"""
         CREATE TABLE IF NOT EXISTS feriados (
-            id SMALLSERIAL PRIMARY KEY,
+            id UUID PRIMARY KEY,
             nome TEXT NOT NULL,
             dia DATE NOT NULL
         );
@@ -148,7 +171,7 @@ class DBHandler(Connection):
         try:
             sql_str = f"""
         CREATE TABLE IF NOT EXISTS alarmes (
-            id SMALLSERIAL PRIMARY KEY,
+            id UUID PRIMARY KEY,
             medidor_id SMALLINT NOT NULL,
             timestamp TIMESTAMP NOT NULL,
             message TEXT NOT NULL,

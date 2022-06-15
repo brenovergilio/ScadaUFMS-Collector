@@ -204,14 +204,14 @@ class DBHandler(Connection):
         finally:
             self._lock.release()
 
-    def add_alarme(self, id, timestamp, message):
+    def add_alarme(self, id, medidor_id, timestamp, message):
         """
         Método responsável por adicionar um novo alarme no banco de dados
         """
         try:
             self._lock.acquire()
-            str_values = f"'{id}', '{timestamp}', '{message}'"
-            sql_str = f"INSERT INTO alarmes (medidor_id, timestamp, message) VALUES ({str_values});"
+            str_values = f"'{id}', '{medidor_id}','{timestamp}', '{message}'"
+            sql_str = f"INSERT INTO alarmes (id, medidor_id, timestamp, message) VALUES ({str_values});"
             self._cursor.execute(sql_str)
             self._con.commit()
         except Exception as e:

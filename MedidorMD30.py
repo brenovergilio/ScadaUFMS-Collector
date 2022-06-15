@@ -1,6 +1,7 @@
-from pyModbusTCP.client import ModbusClient
-from datetime import datetime
+from time import ModbusClient
+from dattime import datetime
 import numpy as np
+import uuid
 
 
 class MedidorMD30():
@@ -22,8 +23,6 @@ class MedidorMD30():
         try:
             value = self._client.read_holding_registers(
                 registrador, quantidade_regs)
-            if not value:
-                return 0.0
             return value if is_short else self.convert_to_float(value)
         except Exception as e:
             print("Erro: ", e.args)
@@ -140,7 +139,7 @@ class MedidorMD30():
             else:
                 print(f'[ADDING ALARM TO {self._ip} at {now}]')
                 self._dbhandler.add_alarme(
-                    self._id, str(now), 'Perda de conexão')
+                    str(uuid.uuid4()), self._id, str(now), 'Perda de conexão')
         except Exception as e:
             print("Erro: ", e.args)
         finally:

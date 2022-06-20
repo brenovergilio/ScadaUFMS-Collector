@@ -18,16 +18,14 @@ if __name__ == '__main__':
     db = DBHandler()
 
     while(True):
-        try:
-            now = datetime.now()
-            second = now.second
-            if(second == 0 or second == 30):
-                # Cria uma lista com todos os medidores cadastrados
-                database_meds = db.get_all_medidores()
-                medidores = medidores_factory(database_meds, db)
-                for med in medidores:
-                    Thread(target=med.collect).start()
-                sleep(1.5)
-        except Exception as e:
-            print('Erro: ', e.args)
-            exit(1)
+
+        now = datetime.now()
+        minute = now.minute
+        if(minute == 0 or minute == 25 or minute == 30 or minute == 45):
+            # Cria uma lista com todos os medidores cadastrados
+            database_meds = db.get_all_medidores()
+            medidores = medidores_factory(database_meds, db)
+            for med in medidores:
+                Thread(target=med.collect).start()
+                Thread(target=med.recover).start()
+            sleep(600)

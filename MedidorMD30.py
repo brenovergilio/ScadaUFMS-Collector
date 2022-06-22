@@ -5,9 +5,9 @@ import numpy as np
 import uuid
 
 SECONDS_IN_A_DAY = 86_400
+SECONDS_IN_AN_HOUR = 3_600
 BRASILIA_STANDARD_TIME = 10_800
-CAMPO_GRANDE_STANDARD_TIME = 14_400
-SECONDS_IN_30_MINUTES = 1800
+SECONDS_IN_30_MINUTES = 1_800
 SECONDS_IN_15_MINUTES = 900
 
 
@@ -60,7 +60,7 @@ class MedidorMD30():
         if(wrote):
             result = self._client.read_holding_registers(200, 20)
             timestamp = datetime.utcfromtimestamp(self.convert_int16_to_int64(
-                result[0:4]) - SECONDS_IN_A_DAY).strftime('%Y-%m-%d %H:%M:%S')
+                result[0:4]) - SECONDS_IN_A_DAY - SECONDS_IN_AN_HOUR).strftime('%Y-%m-%d %H:%M:%S')
             tensao_fase_a = self.convert_to_float(value=result[4:6])
             tensao_fase_b = self.convert_to_float(value=result[6:8])
             tensao_fase_c = self.convert_to_float(value=result[8:10])
@@ -74,25 +74,6 @@ class MedidorMD30():
                 value=result[16:18])
             potencia_reativa_total = self.convert_to_float(
                 value=result[18:20])
-            print("===========================================================")
-            print(
-                f"Hora: {timestamp}")
-            print(
-                f"Tensão Fase A: {tensao_fase_a}")
-            print(
-                f"Tensão Fase B: {tensao_fase_b}")
-            print(
-                f"Tensão Fase C: {tensao_fase_c}")
-            print(
-                f"Corrente Fase A: {corrente_fase_a}")
-            print(
-                f"Corrente Fase B: {corrente_fase_b}")
-            print(
-                f"Corrente Fase C: {corrente_fase_c}")
-            print(
-                f"Potencia Ativa Total: {potencia_ativa_total}")
-            print(
-                f"Potencia Reativa Total: {potencia_reativa_total}")
             medicoes = [tensao_fase_a, tensao_fase_b, tensao_fase_c, corrente_fase_a,
                         corrente_fase_b, corrente_fase_c, potencia_ativa_total, potencia_reativa_total]
             self._dbhandler.add_medicoes(self._id, timestamp, medicoes)
@@ -105,7 +86,7 @@ class MedidorMD30():
     def collect(self):
         try:
             unix_timestamp_to_read = int(
-                time.time()) + SECONDS_IN_A_DAY - CAMPO_GRANDE_STANDARD_TIME - SECONDS_IN_30_MINUTES
+                time.time()) + SECONDS_IN_A_DAY - BRASILIA_STANDARD_TIME - SECONDS_IN_30_MINUTES
             now = datetime.now()
             if(self._client.open()):
                 print(
@@ -128,12 +109,11 @@ class MedidorMD30():
     def recover(self):
         missing_medicoes_md30 = self._dbhandler.get_all_missing_medicoes_md30(
             self._id)
-        unix_timestamps = missing_medicoes_md30[1]
 
         self._client.open()
 
-        for unix_timestamp in unix_timestamps:
-            unix_timestamp = int(unix_timestamp)
+        for missing in missing_medicoes_md30:
+            unix_timestamp = missing[1]
             if(self.read_MM(unix_timestamp) and self._dbhandler.delete_missing_medicao_md30(self._id, unix_timestamp)):
                 self._dbhandler.delete_missing_medicao_md30(
                     self._id, unix_timestamp)

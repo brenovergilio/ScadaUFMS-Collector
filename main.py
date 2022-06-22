@@ -21,11 +21,23 @@ if __name__ == '__main__':
 
         now = datetime.now()
         minute = now.minute
-        if(minute == 0 or minute == 25 or minute == 30 or minute == 45):
+        if(minute == 0 or minute == 15 or minute == 30 or minute == 45):
             # Cria uma lista com todos os medidores cadastrados
             database_meds = db.get_all_medidores()
             medidores = medidores_factory(database_meds, db)
+            collect_threads = []
+            recover_threads = []
             for med in medidores:
-                Thread(target=med.collect).start()
-                Thread(target=med.recover).start()
-            sleep(600)
+                collect_threads.append(Thread(target=med.collect))
+                recover_threads.append(Thread(target=med.recover))
+
+            for collect_thread in collect_threads:
+                collect_thread.start()
+
+            for collect_thread in collect_threads:
+                collect_thread.join()
+
+            for recover_thread in recover_threads:
+                recover_thread.start()
+
+            sleep(800)

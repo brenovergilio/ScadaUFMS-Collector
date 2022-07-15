@@ -1,5 +1,5 @@
 from pyModbusTCP.client import ModbusClient
-from datetime import datetime
+from datetime import datetime, timedelta
 import time
 import numpy as np
 import uuid
@@ -13,7 +13,7 @@ SECONDS_IN_15_MINUTES = 900
 
 class MedidorMD30():
     """
-    Classe que representa o Medidor MD30 e se relaciona com o banco de dados
+    Classe que representa o Medidor MD30
     """
 
     def __init__(self, id, ip, nome, dbhandler, porta=1001):
@@ -24,13 +24,11 @@ class MedidorMD30():
         self._dbhandler = dbhandler
         self._client = self.set_client()
 
-    # Conversão de valores retornados pelo medidor para float
     def convert_to_float(self, value):
         value.reverse()
         retorno = np.array(value, dtype=np.int16).copy().view('float32')
         return float(retorno)
 
-    # Configurar ip e porta do client MODBUS
     def set_client(self):
         client = ModbusClient(self._ip, self._porta, unit_id=1)
         return client
@@ -81,24 +79,24 @@ class MedidorMD30():
 
         return False
 
-    # Requista dados ao medidor e armazena no banco de dados
-
     def collect(self):
         try:
             unix_timestamp_to_read = int(
                 time.time()) + SECONDS_IN_A_DAY - BRASILIA_STANDARD_TIME - SECONDS_IN_30_MINUTES
-            now = datetime.now()
+            related_time = (
+                datetime.now() - timedelta(minutes=30)).strftime("%Y-%m-%d %H:%M:%S")
             if(self._client.open()):
                 print(
-                    f"[COLLECTING DATA FROM {self._ip} ON PORT {self._porta}] at {now}")
+                    f"[Collecting data from {self._ip} - {self._nome} on port {self._porta} related to {related_time}]")
                 success = self.read_MM(unix_timestamp_to_read)
                 if(not success):
                     self._dbhandler.add_missing_medicao_md30(
                         self._id, unix_timestamp_to_read)
             else:
-                print(f'[ADDING ALARM TO {self._ip} at {now}]')
+                print(
+                    f'[Adding alarm to {self._ip} - {self._nome} related to {related_time}]')
                 self._dbhandler.add_alarme(
-                    str(uuid.uuid4()), self._id, str(now), 'Perda de conexão')
+                    str(uuid.uuid4()), self._id, str(related_time), 'Perda de conexão')
                 self._dbhandler.add_missing_medicao_md30(
                     self._id, unix_timestamp_to_read)
         except Exception as e:
@@ -123,7 +121,7 @@ class MedidorMD30():
     # def collect(self):
     #     try:
     #         medicoes = []
-    #         now = datetime.now()
+    #         related_time = datetime.now()
     #         if(self._client.open()):
     #             print(
     #                 f"[COLLECTING DATA FROM {self._ip} ON PORT {self._porta}] at {now}")

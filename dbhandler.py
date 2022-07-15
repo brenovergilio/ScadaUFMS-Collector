@@ -210,7 +210,7 @@ class DBHandler(Connection):
         try:
             self._lock.acquire()
             str_values = f"'{medidor_id}', '{unix_timestamp}'"
-            sql_str = f"INSERT INTO alarmes (medidor_id, unix_timestamp) VALUES ({str_values});"
+            sql_str = f"INSERT INTO missing_medicoes_md30 (medidor_id, unix_timestamp) VALUES ({str_values});"
             self._cursor.execute(sql_str)
             self._con.commit()
         except Exception as e:

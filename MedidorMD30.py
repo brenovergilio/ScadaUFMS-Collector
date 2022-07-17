@@ -56,7 +56,7 @@ class MedidorMD30():
             160, pieces_of_unix_timestamp)
 
         if(wrote):
-            result = self._client.read_holding_registers(200, 20)
+            result = self._client.read_holding_registers(200, 22)
             timestamp = datetime.utcfromtimestamp(self.convert_int16_to_int64(
                 result[0:4]) - SECONDS_IN_A_DAY - SECONDS_IN_AN_HOUR).strftime('%Y-%m-%d %H:%M:%S')
             tensao_fase_a = self.convert_to_float(value=result[4:6])
@@ -72,8 +72,10 @@ class MedidorMD30():
                 value=result[16:18])
             potencia_reativa_total = self.convert_to_float(
                 value=result[18:20])
+            fator_de_potencia = self.convert_to_float(
+                value=result[20:22])
             medicoes = [tensao_fase_a, tensao_fase_b, tensao_fase_c, corrente_fase_a,
-                        corrente_fase_b, corrente_fase_c, potencia_ativa_total, potencia_reativa_total]
+                        corrente_fase_b, corrente_fase_c, potencia_ativa_total, potencia_reativa_total, fator_de_potencia]
             self._dbhandler.add_medicoes(self._id, timestamp, medicoes)
             return True
 

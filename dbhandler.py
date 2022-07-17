@@ -45,7 +45,6 @@ class DBHandler(Connection):
         self._cursor.execute("SET TIMEZONE='Brazil/West';")
         self.create_medidores()
         self.create_medicoes()
-        self.create_feriado()
         self.create_missing_medicoes_md30()
         self.create_alarmes()
 
@@ -88,7 +87,7 @@ class DBHandler(Connection):
             sql_str = f"""
       CREATE TABLE IF NOT EXISTS medicoes_md30 (
         medidor_id UUID NOT NULL,
-        timestamp TIMESTAMP PRIMARY KEY,
+        timestamp TIMESTAMP NOT NULL,
         tensao_fase_a REAL NOT NULL,
         tensao_fase_b REAL NOT NULL,
         tensao_fase_c REAL NOT NULL,
@@ -97,29 +96,11 @@ class DBHandler(Connection):
         corrente_fase_c REAL NOT NULL,
         potencia_ativa_total REAL NOT NULL,
         potencia_reativa_total REAL NOT NULL,
+        fator_de_potencia REAL NOT NULL,
+        PRIMARY KEY (medidor_id, timestamp),
         FOREIGN KEY (medidor_id) REFERENCES medidores_md30(id) ON DELETE CASCADE ON UPDATE CASCADE
       );
       """
-            self._lock.acquire()
-            self._cursor.execute(sql_str)
-            self._con.commit()
-        except Exception as e:
-            print('Erro: ', e.args)
-        finally:
-            self._lock.release()
-
-    def create_feriado(self):
-        """
-        Método responsável por criar a tabela que registra os feriados
-        """
-        try:
-            sql_str = f"""
-        CREATE TABLE IF NOT EXISTS feriados (
-            id UUID PRIMARY KEY,
-            nome TEXT NOT NULL,
-            dia DATE NOT NULL
-        );
-        """
             self._lock.acquire()
             self._cursor.execute(sql_str)
             self._con.commit()

@@ -1,6 +1,6 @@
 import psycopg2 as db
 from threading import Lock
-
+from dotenv import dotenv_values
 
 class Config():
     """
@@ -8,13 +8,15 @@ class Config():
     """
 
     def __init__(self):
+        env = dotenv_values(".env")
+
         self.config = {
             "postgres": {
-                "user": "postgres",
-                "password": "ufms123",
-                "host": "127.0.0.1",
-                "port": "5432",
-                "database": "testmm"
+                "user": env['DB_USER'],
+                "password": env['DB_PASS'],
+                "host": env['DB_HOST'],
+                "port": env['DB_PORT'],
+                "database": env['DB_NAME']
             }
         }
 
